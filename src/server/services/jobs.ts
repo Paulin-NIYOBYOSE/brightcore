@@ -42,9 +42,12 @@ export async function listOpenJobs(search: JobSearch, now: Date = new Date()): P
   };
   if (search.type) where.employmentType = search.type;
   if (search.q) {
+    // `contains` becomes a parameterised ILIKE. Escape LIKE wildcards so that
+    // "%" or "_" in a search match literally instead of matching everything.
+    const term = search.q.replace(/[\\%_]/g, (char) => `\\${char}`);
     where.OR = [
-      { title: { contains: search.q, mode: "insensitive" } },
-      { location: { contains: search.q, mode: "insensitive" } },
+      { title: { contains: term, mode: "insensitive" } },
+      { location: { contains: term, mode: "insensitive" } },
     ];
   }
 
