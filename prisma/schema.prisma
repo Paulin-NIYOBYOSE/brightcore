@@ -1,0 +1,105 @@
+// BrightCore Careers data model.
+// Migrations live in prisma/migrations; run `npm run db:migrate` to apply them.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum JobStatus {
+  DRAFT
+  OPEN
+  CLOSED
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERNSHIP
+}
+
+enum ApplicationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model AdminUser {
+  id           String         @id @default(uuid()) @db.Uuid
+  /// Stored trimmed and lower-cased (also enforced by a CHECK constraint).
+  email        String         @unique @db.VarChar(254)
+  /// Argon2id hash. The plaintext password is never stored.
+  passwordHash String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  sessions     AdminSession[]
+}
+
+/// Server-side administrator session. The browser cookie holds a random token;
+/// only its SHA-256 hash is stored here, so a database leak cannot be replayed.
+model AdminSession {
+  id          String    @id @db.VarChar(64)
+  adminUserId String    @db.Uuid
+  adminUser   AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+
+  @@index([adminUserId])
+  @@index([expiresAt])
+}
+
+model Job {
+  id               String         @id @default(uuid()) @db.Uuid
+  title            String         @db.VarChar(120)
+  location         String         @db.VarChar(120)
+  employmentType   EmploymentType
+  summary          String         @db.VarChar(300)
+  description      String         @db.VarChar(10000)
+  /// One entry per bullet point, in display order.
+  responsibilities String[]
+  /// One entry per bullet point, in display order.
+  requirements     String[]
+  /// Calendar date (no time). Applications are accepted through the end of this
+  /// date in the business timezone (APP_TIMEZONE, default Africa/Kigali).
+  closingDate      DateTime       @db.Date
+  status           JobStatus      @default(DRAFT)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  applications     Application[]
+
+  @@index([status, closingDate])
+  @@index([createdAt])
+}
+
+model Application {
+  id                 String            @id @default(uuid()) @db.Uuid
+  jobId              String            @db.Uuid
+  /// Restrict: a job with applications can never be deleted out from under them.
+  job                Job               @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  fullName           String            @db.VarChar(120)
+  /// Stored trimmed and lower-cased (also enforced by a CHECK constraint).
+  email              String            @db.VarChar(254)
+  phone              String            @db.VarChar(32)
+  coverNote          String            @db.VarChar(2000)
+  /// Random server-generated file name inside the private CV storage directory.
+  cvStorageKey       String            @unique @db.VarChar(64)
+  /// Sanitised file name supplied by the candidate, used only for display and downloads.
+  cvOriginalFilename String            @db.VarChar(255)
+  status             ApplicationStatus @default(PENDING)
+  decisionNote       String?           @db.VarChar(1000)
+  /// When an administrator last accepted or rejected the application.
+  decidedAt          DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  /// One application per candidate email per job.
+  @@unique([jobId, email])
+  @@index([status])
+  @@index([jobId, status])
+  @@index([createdAt])
+}
