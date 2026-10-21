@@ -37,7 +37,7 @@ export default async function ApplyPage({ params }: Props) {
         Back to job description
       </Link>
 
-      <div className="mt-5 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="mt-5 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
             Apply for {job.title}

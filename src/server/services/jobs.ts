@@ -77,7 +77,10 @@ export async function listJobsForAdmin() {
 
 export async function getJobForAdmin(jobId: string) {
   if (!isValidId(jobId)) return null;
-  return prisma.job.findUnique({ where: { id: jobId } });
+  return prisma.job.findUnique({
+    where: { id: jobId },
+    include: { _count: { select: { applications: true } } },
+  });
 }
 
 /** Lightweight list for filter drop-downs. */

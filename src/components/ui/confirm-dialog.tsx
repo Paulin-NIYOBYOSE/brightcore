@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
@@ -32,18 +32,27 @@ export function ConfirmDialog({
   onConfirm,
 }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const titleId = useId();
   const descriptionId = useId();
 
+  // Keep the native dialog in sync with React state.
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (isOpen && !dialog.open) dialog.showModal();
+    if (!isOpen && dialog.open) dialog.close();
+  }, [isOpen]);
+
   function open() {
     setError(null);
-    dialogRef.current?.showModal();
+    setIsOpen(true);
   }
 
   function close() {
-    if (!isPending) dialogRef.current?.close();
+    if (!isPending) setIsOpen(false);
   }
 
   function confirm() {
@@ -51,7 +60,7 @@ export function ConfirmDialog({
       try {
         const message = await onConfirm();
         if (message) setError(message);
-        else dialogRef.current?.close();
+        else setIsOpen(false);
       } catch {
         setError("Something went wrong. Please try again.");
       }
@@ -66,11 +75,13 @@ export function ConfirmDialog({
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
         onCancel={(event) => {
-          if (isPending) event.preventDefault();
+          // Escape key: let React state drive the close, and never mid-request.
+          event.preventDefault();
+          close();
         }}
         onClick={(event) => {
           // A click on the backdrop targets the dialog element itself.
-          if (event.target === dialogRef.current) close();
+          if (event.target === event.currentTarget) close();
         }}
         className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-xl border border-slate-200 bg-white p-0 text-slate-900 shadow-xl backdrop:bg-slate-950/50"
       >

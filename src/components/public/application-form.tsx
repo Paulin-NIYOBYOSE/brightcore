@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { submitApplicationAction } from "@/app/(public)/jobs/[jobId]/apply/actions";
 import { CvUploadField } from "@/components/public/cv-upload-field";
 import { Alert } from "@/components/ui/alert";
@@ -44,7 +44,7 @@ export function ApplicationForm({ jobId, jobTitle }: { jobId: string; jobTitle: 
   const cvInputRef = useRef<HTMLInputElement>(null);
   const formErrorRef = useRef<HTMLDivElement>(null);
   const successHeadingRef = useRef<HTMLHeadingElement>(null);
-  const coverNoteLength = form.watch("coverNote").length;
+  const coverNoteLength = useWatch({ control: form.control, name: "coverNote" }).length;
 
   useEffect(() => {
     if (formError) formErrorRef.current?.focus();
@@ -71,48 +71,49 @@ export function ApplicationForm({ jobId, jobTitle }: { jobId: string; jobTitle: 
     return problem ? null : cvFile;
   }
 
-  const onSubmit = form.handleSubmit(
-    (values) => {
-      setFormError(null);
-      const cv = validateCv();
-      if (!cv) {
-        cvInputRef.current?.focus();
-        return;
-      }
+  function send(values: ApplicationFields) {
+    setFormError(null);
+    const cv = validateCv();
+    if (!cv) {
+      cvInputRef.current?.focus();
+      return;
+    }
 
-      const data = new FormData();
-      data.set("jobId", jobId);
-      for (const name of FIELD_NAMES) data.set(name, values[name]);
-      data.set("cv", cv);
+    const data = new FormData();
+    data.set("jobId", jobId);
+    for (const name of FIELD_NAMES) data.set(name, values[name]);
+    data.set("cv", cv);
 
-      startTransition(async () => {
-        try {
-          const result = await submitApplicationAction(data);
-          if (result.ok) {
-            setSubmitted({
-              reference: result.reference,
-              firstName: values.fullName.split(" ")[0],
-              email: values.email,
-            });
-            return;
-          }
-          for (const [field, message] of Object.entries(result.fieldErrors ?? {})) {
-            if (!message) continue;
-            if (field === "cv") setCvError(message);
-            else if (isFieldName(field)) form.setError(field, { message });
-          }
-          setFormError(result.message);
-        } catch {
-          // Network failure, or the request was rejected before reaching our code.
-          setFormError(
-            "We couldn't send your application. Check your internet connection and make sure your CV is a PDF under 5 MB, then try again.",
-          );
+    startTransition(async () => {
+      try {
+        const result = await submitApplicationAction(data);
+        if (result.ok) {
+          setSubmitted({
+            reference: result.reference,
+            firstName: values.fullName.split(" ")[0],
+            email: values.email,
+          });
+          return;
         }
-      });
-    },
-    // Client validation failed: also flag a missing CV so every problem shows at once.
-    () => validateCv(),
-  );
+        for (const [field, message] of Object.entries(result.fieldErrors ?? {})) {
+          if (!message) continue;
+          if (field === "cv") setCvError(message);
+          else if (isFieldName(field)) form.setError(field, { message });
+        }
+        setFormError(result.message);
+      } catch {
+        // Network failure, or the request was rejected before reaching our code.
+        setFormError(
+          "We couldn't send your application. Check your internet connection and make sure your CV is a PDF under 5 MB, then try again.",
+        );
+      }
+    });
+  }
+
+  function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    // When client validation fails, also flag a missing CV so every problem shows at once.
+    void form.handleSubmit(send, () => validateCv())(event);
+  }
 
   if (submitted) {
     return (

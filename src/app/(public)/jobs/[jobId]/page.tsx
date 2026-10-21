@@ -56,7 +56,7 @@ export default async function JobDetailsPage({ params }: Props) {
         )}
       </header>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
         <article className="space-y-8">
           <section aria-labelledby="about-heading">
             <h2 id="about-heading" className="text-lg font-semibold text-slate-900">
