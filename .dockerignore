@@ -1,0 +1,17 @@
+# Never send secrets, local data or build output into the image.
+.git
+.env
+.env.*
+!.env.example
+storage
+node_modules
+.next
+src/generated
+coverage
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+.DS_Store
+AGENTS.md
+CLAUDE.md
+.claude
