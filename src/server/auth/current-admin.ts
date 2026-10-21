@@ -3,9 +3,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { validateAdminSession, type AdminIdentity } from "@/server/auth/admin-auth";
+import { SESSION_COOKIE_NAME } from "@/server/auth/constants";
 import { getEnv } from "@/server/env";
-
-export const SESSION_COOKIE_NAME = "bc_admin_session";
 
 /**
  * The signed-in administrator for the current request, or null.

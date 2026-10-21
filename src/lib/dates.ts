@@ -67,6 +67,11 @@ export function formatDateTime(instant: Date, timeZone: string): string {
   }).format(instant);
 }
 
+/** "Africa/Kigali" -> "Kigali", for phrases such as "end of day, Kigali time". */
+export function timeZoneCity(timeZone: string): string {
+  return (timeZone.split("/").pop() ?? timeZone).replaceAll("_", " ");
+}
+
 export function isValidTimeZone(timeZone: string): boolean {
   try {
     new Intl.DateTimeFormat("en-GB", { timeZone });
